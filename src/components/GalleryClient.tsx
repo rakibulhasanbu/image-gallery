@@ -13,6 +13,21 @@ export default function GalleryClient({
     const [error, setError] = useState<string | null>(null);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(12); // Show 12 images per page
+
+    // Calculate pagination values
+    const totalPages = Math.ceil(images.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentImages = images.slice(startIndex, endIndex);
+
+    // Reset to first page when images change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [images.length]);
+
     const refreshImages = async () => {
         try {
             setLoading(true);
@@ -45,6 +60,23 @@ export default function GalleryClient({
             .catch((err) => {
                 console.error("Failed to copy URL: ", err);
             });
+    };
+
+    // Pagination handlers
+    const goToPage = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
+    const goToPrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
     };
 
     useEffect(() => {
@@ -130,14 +162,14 @@ export default function GalleryClient({
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                        {images
+                    <div className=" columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
+                        {currentImages
                             ?.sort()
                             .reverse()
                             .map((url) => (
                                 <div
                                     key={url}
-                                    className="group relative overflow-hidden rounded-lg bg-gray-800 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+                                    className="group relative overflow-hidden mb-4 rounded-lg bg-gray-800 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02] cursor-pointer"
                                     onClick={() => copyImageUrl(url)}
                                 >
                                     <div className="aspect-w-16 aspect-h-10 relative overflow-hidden">
@@ -145,7 +177,7 @@ export default function GalleryClient({
                                             src={url}
                                             alt="Gallery image"
                                             className="object-cover transition-all duration-500 group-hover:scale-105 group-hover:brightness-110"
-                                            unoptimized={true}
+                                            unoptimized
                                             width={720}
                                             height={480}
                                         />
@@ -199,6 +231,113 @@ export default function GalleryClient({
                                 </div>
                             ))}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            {/* Page Info */}
+                            <div className="text-sm text-gray-400">
+                                Showing {startIndex + 1} to{" "}
+                                {Math.min(endIndex, images.length)} of{" "}
+                                {images.length} images
+                            </div>
+
+                            {/* Pagination Buttons */}
+                            <div className="flex items-center gap-2">
+                                {/* Previous Button */}
+                                <button
+                                    onClick={goToPrevPage}
+                                    disabled={currentPage === 1}
+                                    className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed rounded-md transition-colors"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 19l-7-7 7-7"
+                                        />
+                                    </svg>
+                                    Previous
+                                </button>
+
+                                {/* Page Numbers */}
+                                <div className="flex items-center gap-1">
+                                    {Array.from(
+                                        { length: totalPages },
+                                        (_, i) => i + 1
+                                    ).map((page) => {
+                                        // Show first page, last page, current page, and pages around current
+                                        const shouldShow =
+                                            page === 1 ||
+                                            page === totalPages ||
+                                            Math.abs(page - currentPage) <= 1;
+
+                                        if (shouldShow) {
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() =>
+                                                        goToPage(page)
+                                                    }
+                                                    className={`px-3 py-2 rounded-md transition-colors ${
+                                                        page === currentPage
+                                                            ? "bg-blue-600 text-white"
+                                                            : "bg-gray-700 hover:bg-gray-600 text-gray-300"
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        } else if (
+                                            (page === 2 && currentPage > 3) ||
+                                            (page === totalPages - 1 &&
+                                                currentPage < totalPages - 2)
+                                        ) {
+                                            return (
+                                                <span
+                                                    key={page}
+                                                    className="px-2 text-gray-500"
+                                                >
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+
+                                {/* Next Button */}
+                                <button
+                                    onClick={goToNextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed rounded-md transition-colors"
+                                >
+                                    Next
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
